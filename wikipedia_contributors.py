@@ -7,7 +7,8 @@ Created on Mon Apr 20 21:29:14 2015
 Extract users of active wikipedia languages. Save them to csv file.
 """
 
-import urllib2, csv
+import urllib2, csv, filecmp, os
+from datetime import datetime
 from sys import argv
 from bs4 import BeautifulSoup
 import lang_not_wikiq_codes
@@ -70,8 +71,13 @@ def get_contributors(wiki_links):
     Using links, find all users from each language page. Save them to csv file.
     """
     #wiki_links = [['http://stats.wikimedia.org/EN/TablesWikipediaEO.htm', 'en', '0']]        
-    
-    out = open('wiki_contributors.csv', 'wb')
+    print 'DAAAAATEEEEEEE', datetime.now()
+    date = str(datetime.now())[0:10]
+    filename = 'wikipedia_contributors_%s.csv' % (date)
+    if os.path.exists(filename):
+        filename = filename[:-4] + 'D' + '.csv'
+       
+    out = open(filename, 'wb')
     writer = csv.DictWriter(out, fieldnames = ['username', 'edits, articles, 30 dy', 'edits, other, 30 dy', 'creates, articles, 30 dy', 'creates, other, 30 dy', 'link', 'lang'], dialect='excel')
     writer.writeheader()
     
@@ -128,17 +134,69 @@ def get_contributors(wiki_links):
     for e in errors:
         print e[6]
         
-    return 'Done.'
+    return 1
+    
+def find_csv():
+    csv = []
+    for f in os.listdir(os.getcwd()):
+        if f.startswith("wikipedia_contributors") and f.endswith(".csv"):
+            csv.append(f)
+    return csv
     
 if __name__ == "__main__":  
-    if len(argv) > 1:
-        if argv[1] == 'diff':
-            codes = lang_not_wikiq_codes.find_diff()
-            print "DIFFERENCE:", codes
+    """
+    Either make a list of Wikipedia languages codes not present on Wiktionary 
+    by calling find_diff from lang_not_wikiq_codes file or if no
+    argument is given just get all languages codes from Wikipedia stats page and
+    make a list of contributors from most active languages on Wikipedia. 
+    """
+    files = find_csv()
+    
+    if len(files) == 0:
+        print "No wikipedia contributors list was found in the directory."
     else:
-        codes = get_wiki_languages()
-    links = create_links(codes)
-    get_contributors(links)
+        latest = max(files, key=os.path.getctime)
+        date = datetime.fromtimestamp(os.path.getctime(latest))
+        print 'Most recent list of Wiktionary contributors was generated on:', date
+        
+    do = ''
+    while True:
+        do = raw_input('Do you want to get a new list (y/n)? ')
+        if do == 'y' or do == 'n':
+            break
+        
+    if do == 'y':
+        do = ''
+        
+        while True:
+            do = raw_input('Do you want get only languages not on Wiktionary (y/n)? ')
+            if do == 'y' or do == 'n':
+                break
+            
+        if do == 'y':
+            codes = lang_not_wikiq_codes.find_diff()
+        else:
+            codes = get_wiki_languages()
+            
+        links = create_links(codes)
+        if get_contributors(links) == 1:
+            updated_files = find_csv()
+            
+            if len(updated_files) == 0:
+                print "No files to compare."
+            else:
+                latest2 = max(updated_files, key=os.path.getctime)
+                res = filecmp.cmp(latest, latest2, shallow = False)
+                
+                if res == True:
+                    print 'No new data.'
+                else:
+                    print 'New contributors info acquired.'
+    else:
+        print "Thank you, have a nice and productive day!"
+    
+    
+    
     
 
     

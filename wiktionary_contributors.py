@@ -7,7 +7,8 @@ Created on Mon Apr 20 21:29:14 2015
 Wiktionary contributors
 """
 
-import urllib2, csv
+import urllib2, csv, os, filecmp
+from datetime import datetime
 from bs4 import BeautifulSoup
 
 def get_active_languages():
@@ -64,13 +65,19 @@ def get_contributors(wiktio_links):
     
     #wiktio_links = [['http://stats.wikimedia.org/wiktionary/EN/TablesWikipediaJA.htm', 'en', '0']]        
     
-    out = open('wiktionary_contributors.csv', 'wb')
+    print 'DAAAAATEEEEEEE', datetime.now()
+    date = str(datetime.now())[0:10]
+    filename = 'wiktionary_contributors_%s.csv' % (date)
+    if os.path.exists(filename):
+        filename = filename[:-4] + 'D' + '.csv'
+    out = open(filename, 'wb')
     writer = csv.DictWriter(out, fieldnames = ['username', 'edits, articles, 30 dy', 'edits, other, 30 dy', 'creates, articles, 30 dy', 'creates, other, 30 dy', 'link', 'lang'], dialect='excel')
     writer.writeheader()
     
     errors = []
     
     for l in wiktio_links:
+        print l
         lang_link = l[0]
         page = urllib2.urlopen(lang_link).read()
         soup = BeautifulSoup(page, "html.parser")
@@ -95,27 +102,64 @@ def get_contributors(wiktio_links):
             except IndexError:
                 print "Index Error!"
                 print "user_data:", user_data, "user:", name, "language:", l, "\n"
-    
-    #for e in errors:
-    #    print e[0]
-    #print '*******************************'
-    #for e in errors:
-    #    print e[1]
-    #print '*******************************'
-    #for e in errors:
-    #    print e[2]
-    #print '*******************************'
-    #for e in errors:
-    #    print e[3]
-    #print '*******************************'
-    #for e in errors:
-    #    print e[4]
-    for e in errors:
-        print e[5]
-    #for e in errors:
-    #    print e[6]
+    return 1
+#    for e in errors:
+#        print e[0]
+#    print '*******************************'
+#    for e in errors:
+#        print e[1]
+#    print '*******************************'
+#    for e in errors:
+#        print e[2]
+#    print '*******************************'
+#    for e in errors:
+#        print e[3]
+#    print '*******************************'
+#    for e in errors:
+#        print e[4]
+#    for e in errors:
+#        print e[5]
+#    for e in errors:
+#        print e[6]
+
+def find_csv():
+    csv = []
+    for f in os.listdir(os.getcwd()):
+        if f.startswith("wiktionary_contributors") and f.endswith(".csv"):
+            csv.append(f)
+    return csv
 
 if __name__ == "__main__":
-    langs = get_active_languages()
-    get_contributors(langs)
+    files = find_csv()
+    if len(files) > 0:
+        latest = max(files, key=os.path.getctime)
+        date = datetime.fromtimestamp(os.path.getctime(latest))
+        print 'Most recent list of Wiktionary contributors was generated on:', date
+    else:
+        print "no list of wiktionary contributors was found in the directory"
+    do = ''
+    while True:
+        do = raw_input('Do you want to get a new list (y/n)? ')
+        if do == 'y' or do == 'n':
+            break
+    if do == 'y':
+        langs = get_active_languages()
+        if get_contributors(langs) == 1:
+            updated_files = find_csv()
+            if len(updated_files) > 0:
+                latest2 = max(updated_files, key=os.path.getctime)
+                res = filecmp.cmp(latest, latest2, shallow = False)
+                if res == True:
+                    print 'No new data.'
+                else:
+                    print 'New contributors info acquired.'
+            else:
+                print "no files to compare."
+    else:
+        print "Thank you, have a nice and productive day!"
+#    for c in cvs:
+#        t = os.path.getctime(c) 
+#        print datetime.fromtimestamp(t)
+#        print datetime.now() - datetime.fromtimestamp(t)
+
     
